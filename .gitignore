@@ -1,0 +1,7 @@
+UAE_single_table/datasets
+UAE_single_table/models
+UAE_single_table/results
+UAE_single_table/__pycache__
+
+UAE_single_table/test_queries
+UAE_single_table/training_queries

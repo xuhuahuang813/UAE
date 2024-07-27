@@ -197,9 +197,18 @@ def QueryTwosided(estimators,
 def ReportEsts(estimators):
     v = -1
     for est in estimators:
-        print(est.name, 'max', np.max(est.errs), '99th',
-              np.quantile(est.errs, 0.99), '95th', np.quantile(est.errs, 0.95),
-              'median', np.quantile(est.errs, 0.5), 'mean', np.mean(est.errs))
+        print(est.name, 
+              "\n0.0th", f"{np.quantile(est.errs, 0.0):.5f}",
+              "\n25th", f"{np.quantile(est.errs, 0.25):.5f}",
+              "\n50th", f"{np.quantile(est.errs, 0.5):.5f}",
+              "\n75th", f"{np.quantile(est.errs, 0.75):.5f}",
+              "\n90th", f"{np.quantile(est.errs, 0.90):.5f}",
+              "\n95th", f"{np.quantile(est.errs, 0.95):.5f}",
+              "\n99th", f"{np.quantile(est.errs, 0.99):.5f}",
+              "\n99.9th", f"{np.quantile(est.errs, 0.999):.5f}",
+              '\nmean', f"{np.mean(est.errs):.5f}", 
+              "\nmax", f"{np.max(est.errs):.5f}", 
+              "\ntime_ms", f"{np.mean(est.query_dur_ms):.5f}")
         v = max(v, np.max(est.errs))
     return v
 
@@ -250,7 +259,7 @@ def RunNwithQueries(table,
                     query=(wildcard_indicator[i], valid_i_list[i]),
                     table=table,
                     oracle_est=oracle_est)
-        max_err = ReportEsts(estimators)
+    max_err = ReportEsts(estimators)
     return False
 
 
@@ -322,8 +331,10 @@ def Main():
 
     selected_ckpts = all_ckpts
 
+    # TODO hxh 测试文件
     if not args.random_workload:
-        file_str = "test_queries/" + args.dataset + "-test-in.txt"
+        file_str = "test_queries/" + args.dataset + "-test-in-mirror.txt"
+        # file_str = "test_queries/" + args.dataset + "-test-in.txt"
     else:
         file_str = "test_queries/" + args.dataset + "-test-random.txt"
 
@@ -402,7 +413,8 @@ def Main():
                         log_every=50,
                         oracle_cards=oracle_cards,
                         oracle_est=oracle_est)
-    err_csv = 'result_' + args.dataset + str(args.psample) + '.csv'
+    # err_csv = 'result_' + args.dataset + str(args.psample) + '.csv'
+    err_csv = args.err_csv
     SaveEstimators(err_csv, estimators)
     print('...Done, result:', err_csv)
 

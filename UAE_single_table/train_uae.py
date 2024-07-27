@@ -543,7 +543,8 @@ def TrainTask(seed=0, rng=None):
 
     # load train data
 
-    file_str = './training_queries/{}-train.txt'.format(args.dataset)
+    # TODO hxh 训练文件
+    file_str = './training_queries/{}-train-mirror.txt'.format(args.dataset)
     with open(file_str, 'r', encoding="utf8") as f:
         workload_stats = json.load(f)
     tmp_card_list = workload_stats['card_list'][0: args.workload_size]
@@ -571,6 +572,7 @@ def TrainTask(seed=0, rng=None):
             continue
 
     total_query_num = len(card_list)
+    print(f"total {total_query_num} queries")
 
     if args.run_uaeq:
         q_bs = args.q_bs

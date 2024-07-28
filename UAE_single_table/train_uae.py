@@ -535,7 +535,7 @@ def TrainTask(seed=0, rng=None):
 
     opt = torch.optim.Adam(list(model.parameters()), 2e-4)
 
-    log_every = 200
+    log_every = 1
 
     train_data = common.TableDataset(table_train)
     n_cols = len(table.columns)

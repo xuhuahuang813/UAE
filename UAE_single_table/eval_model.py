@@ -15,7 +15,8 @@ import common
 import datasets
 import estimators as estimators_lib
 import made
-
+import csv
+from datetime import datetime
 # For inference speed.
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = True
@@ -25,6 +26,9 @@ print('Device', DEVICE)
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument('--test-query-path',
+                    type=str,
+                    help='test query file path')
 parser.add_argument('--inference-opts',
                     action='store_true',
                     help='Tracing optimization for better latency.')
@@ -62,7 +66,7 @@ parser.add_argument('--fc-hiddens',
                     type=int,
                     default=128,
                     help='Hidden units in FC.')
-parser.add_argument('--layers', type=int, default=2, help='# layers in FC.')
+parser.add_argument('--layers', type=int, default=4, help='# layers in FC.')
 parser.add_argument('--residual', action='store_true', help='ResMade?')
 parser.add_argument('--direct-io', action='store_true', help='Do direct IO?')
 parser.add_argument(
@@ -194,22 +198,53 @@ def QueryTwosided(estimators,
     pprint()
 
 
-def ReportEsts(estimators):
+def ReportEsts(estimators, csv_file='results/test_summary.csv'):
     v = -1
-    for est in estimators:
-        print(est.name, 
-              "\n0.0th", f"{np.quantile(est.errs, 0.0):.5f}",
-              "\n25th", f"{np.quantile(est.errs, 0.25):.5f}",
-              "\n50th", f"{np.quantile(est.errs, 0.5):.5f}",
-              "\n75th", f"{np.quantile(est.errs, 0.75):.5f}",
-              "\n90th", f"{np.quantile(est.errs, 0.90):.5f}",
-              "\n95th", f"{np.quantile(est.errs, 0.95):.5f}",
-              "\n99th", f"{np.quantile(est.errs, 0.99):.5f}",
-              "\n99.9th", f"{np.quantile(est.errs, 0.999):.5f}",
-              '\nmean', f"{np.mean(est.errs):.5f}", 
-              "\nmax", f"{np.max(est.errs):.5f}", 
-              "\ntime_ms", f"{np.mean(est.query_dur_ms):.5f}")
-        v = max(v, np.max(est.errs))
+    file_exists = os.path.isfile(csv_file)  # 检查文件是否存在
+    
+    with open(csv_file, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        
+        # 文件不存在则写入表头
+        if not file_exists:
+            writer.writerow(["Timestamp", "Estimator", "0.0th", "25th", "50th", "75th", "90th", "95th", "99th", "99.9th", "Max", "Mean", "Time_ms"])
+        
+        for est in estimators:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            row = [
+                timestamp,
+                est.name,
+                f"{np.quantile(est.errs, 0.0):.5f}",
+                f"{np.quantile(est.errs, 0.25):.5f}",
+                f"{np.quantile(est.errs, 0.5):.5f}",
+                f"{np.quantile(est.errs, 0.75):.5f}",
+                f"{np.quantile(est.errs, 0.90):.5f}",
+                f"{np.quantile(est.errs, 0.95):.5f}",
+                f"{np.quantile(est.errs, 0.99):.5f}",
+                f"{np.quantile(est.errs, 0.999):.5f}",
+                f"{np.max(est.errs):.5f}",
+                f"{np.mean(est.errs):.5f}",
+                f"{np.mean(est.query_dur_ms):.5f}"
+            ]
+            
+            # 打印输出
+            print(timestamp, est.name, 
+                  "\n0.0th", row[2],
+                  "\n25th", row[3],
+                  "\n50th", row[4],
+                  "\n75th", row[5],
+                  "\n90th", row[6],
+                  "\n95th", row[7],
+                  "\n99th", row[8],
+                  "\n99.9th", row[9],
+                  "\nmax", row[10], 
+                  '\nmean', row[11], 
+                  "\ntime_ms", row[12])
+            
+            # 写入CSV文件
+            writer.writerow(row)
+            
+            v = max(v, np.max(est.errs))
     return v
 
 
@@ -333,7 +368,7 @@ def Main():
 
     # TODO hxh 测试文件
     if not args.random_workload:
-        file_str = "test_queries/" + args.dataset + "-test-in-mirror.txt"
+        file_str = args.test_query_path
         # file_str = "test_queries/" + args.dataset + "-test-in.txt"
     else:
         file_str = "test_queries/" + args.dataset + "-test-random.txt"

@@ -25,6 +25,9 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print('Device', DEVICE)
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--train-query-path',
+                    type=str,
+                    help='train query file path')
 parser.add_argument('--cuda-num',
                     type=int,
                     default=None,
@@ -535,7 +538,7 @@ def TrainTask(seed=0, rng=None):
 
     opt = torch.optim.Adam(list(model.parameters()), 2e-4)
 
-    log_every = 1
+    log_every = 10000
 
     train_data = common.TableDataset(table_train)
     n_cols = len(table.columns)
@@ -544,7 +547,7 @@ def TrainTask(seed=0, rng=None):
     # load train data
 
     # TODO hxh 训练文件
-    file_str = './training_queries/{}-train-mirror.txt'.format(args.dataset)
+    file_str = args.train_query_path
     with open(file_str, 'r', encoding="utf8") as f:
         workload_stats = json.load(f)
     tmp_card_list = workload_stats['card_list'][0: args.workload_size]
@@ -629,7 +632,7 @@ def TrainTask(seed=0, rng=None):
                                                   n_cols=n_cols,
                                                   batch_size=q_bs,
                                                   epoch_num=epoch,
-                                                  log_every=10)
+                                                  log_every=log_every)
 
         if epoch % log_every == 0:
             print('epoch {} train loss {:.4f} nats'.format(
@@ -645,9 +648,12 @@ def TrainTask(seed=0, rng=None):
                 args.dataset, q_bs, epoch, args.psample, seed, tau,  args.layers)
 
         os.makedirs(os.path.dirname(PATH), exist_ok=True)
-        torch.save(model.state_dict(), PATH)
-        print('Saved to:')
-        print(PATH)
+        if epoch == args.epochs-1:
+            since_start = time.time() - train_start
+            print('time since start: {:.1f} secs'.format(since_start))
+            torch.save(model.state_dict(), PATH)
+            print('Saved to:')
+            print(PATH)
 
 
 TrainTask()

@@ -21,7 +21,7 @@ from datetime import datetime
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = True
 
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print('Device', DEVICE)
 
 parser = argparse.ArgumentParser()
@@ -405,7 +405,7 @@ def Main():
         assert order is None or len(order) == model.nin, order
         ReportModel(model)
         print('Loading ckpt:', s)
-        model.load_state_dict(torch.load(s, map_location='cuda:1'))
+        model.load_state_dict(torch.load(s, map_location=DEVICE))
         model.eval()
 
 

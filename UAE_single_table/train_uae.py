@@ -21,7 +21,7 @@ import pandas as pd
 import json
 import copy
 
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+DEVICE = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print('Device', DEVICE)
 
 parser = argparse.ArgumentParser()

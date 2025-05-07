@@ -7,8 +7,8 @@
 # 需要保留--column-masking，否则会报错
 # 训练Made时，去掉--residual；训练ResMade时，保留--residual，并将BS设置为512避免cuda内存不够报错。
 # 训练（默认）
-python train_uae.py \
-        --num-gpus=1 \
+CUDA_VISIBLE_DEVICES=0 python train_uae.py \
+        --num-gpus=0 \
         --dataset=census \
         --workload-size=19000 \
         --train-query-path=training_queries/census_train_3-train-mirror.txt \
@@ -35,7 +35,7 @@ python train_uae.py \
 # 需要保留--column-masking，否则会报错
 # 使用Made预测时，去掉--residual；使用ResMade预测时，保留--residual。
 # 预测（默认）
-python eval_model.py \
+CUDA_VISIBLE_DEVICES=0 python eval_model.py \
         --dataset=census \
         --glob='uae-census-bs-512-19epochs-psample-200-seed-0-tau-1.0-q-weight-0.0001-layers-4.pt'  \
         --test-query-path=test_queries/census_train_3-test-mirror.txt \

@@ -17,6 +17,8 @@ import estimators as estimators_lib
 import made
 import csv
 from datetime import datetime
+import traceback
+
 # For inference speed.
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = True
@@ -29,6 +31,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--test-query-path',
                     type=str,
                     help='test query file path')
+parser.add_argument('--test-query-num',
+                    type=int,
+                    default=2000,
+                    help='test query num')
 parser.add_argument('--inference-opts',
                     action='store_true',
                     help='Tracing optimization for better latency.')
@@ -91,6 +97,8 @@ parser.add_argument(
 
 
 args = parser.parse_args()
+with open(args.test_query_path, 'r', encoding="utf8") as f:
+        global_test_query = json.load(f)['query_list'][ : args.test_query_num]
 
 
 def InvertOrder(order):
@@ -239,7 +247,7 @@ def ReportEsts(estimators, csv_file='results/test_summary.csv'):
                   "\n99.9th", row[9],
                   "\nmax", row[10], 
                   '\nmean', row[11], 
-                  "\ntime_ms", row[12])
+                  "\avg time_ms", row[12])
             
             # 写入CSV文件
             writer.writerow(row)
@@ -277,7 +285,11 @@ def RunNwithQueries(table,
                                                                   operators_list,
                                                                   vals_list)
     valid_i_list = np.array(valid_i_list)
+    
+    start_time = time.time()
     for i in range(num):
+        if len(columns_list[i]) ==1:
+            print(f"\n[INFO] single predicate Query {i}")
         do_print = False
         if i % log_every == 0:
             if last_time is not None:
@@ -287,14 +299,31 @@ def RunNwithQueries(table,
             print('Query {}:'.format(i), end=' ')
             last_time = time.time()
 
-        QueryTwosided(estimators,
-                    do_print,
-                    oracle_card=oracle_cards[i]
-                    if oracle_cards is not None and i < len(oracle_cards) else None,
-                    query=(wildcard_indicator[i], valid_i_list[i]),
-                    table=table,
-                    oracle_est=oracle_est)
+        # QueryTwosided(estimators,
+        #             do_print,
+        #             oracle_card=oracle_cards[i]
+        #             if oracle_cards is not None and i < len(oracle_cards) else None,
+        #             query=(wildcard_indicator[i], valid_i_list[i]),
+        #             table=table,
+        #             oracle_est=oracle_est)
+        try:
+            QueryTwosided(
+                estimators,
+                do_print,
+                oracle_card=oracle_cards[i] if oracle_cards is not None and i < len(oracle_cards) else None,
+                query=(wildcard_indicator[i], valid_i_list[i]),
+                table=table,
+                oracle_est=oracle_est
+            )
+        except Exception as e:
+            print(f"\n[Warning] Error occurred at Query {i}: {e}; {columns_list[i]}")
+            print(f"  wildcard_indicator[i] = {wildcard_indicator[i]}")
+            print(f"  valid_i_list[i] = {valid_i_list[i]}")
+            traceback.print_exc()
+            continue  # 跳过此查询，继续执行
     max_err = ReportEsts(estimators)
+    total_time_sec = time.time() - start_time  # 结束计时
+    print("\nTotal time: {:.5f} seconds".format(total_time_sec))
     return False
 
 
@@ -342,7 +371,8 @@ def SaveEstimators(path, estimators, return_df=False):
     results = pd.DataFrame()
     for est in estimators:
         data = {
-            'est': [est.name] * len(est.errs),
+            'query_no': list(range(args.test_query_num)),
+            'query': global_test_query[:args.test_query_num],
             'err': est.errs,
             'est_card': est.est_cards,
             'true_card': est.true_cards,
@@ -376,8 +406,8 @@ def Main():
 
     with open(file_str, 'r', encoding="utf8") as f:
         workload_stats = json.load(f)
-    card_list = workload_stats['card_list']
-    query_list = workload_stats['query_list']
+    card_list = workload_stats['card_list'][ : args.test_query_num]
+    query_list = workload_stats['query_list'][ : args.test_query_num]
     oracle_cards = [float(card) for card in card_list]
 
     print('ckpts', selected_ckpts)
@@ -445,7 +475,7 @@ def Main():
                         estimators,
                         query_list,
                         rng=np.random.RandomState(1234),
-                        log_every=50,
+                        log_every=20000,
                         oracle_cards=oracle_cards,
                         oracle_est=oracle_est)
     # err_csv = 'result_' + args.dataset + str(args.psample) + '.csv'

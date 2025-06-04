@@ -550,8 +550,8 @@ def TrainTask(seed=0, rng=None):
     file_str = args.train_query_path
     with open(file_str, 'r', encoding="utf8") as f:
         workload_stats = json.load(f)
-    tmp_card_list = workload_stats['card_list'][0: args.workload_size]
-    query_list = workload_stats['query_list'][0: args.workload_size]
+    tmp_card_list = workload_stats['card_list'][:args.workload_size]
+    query_list = workload_stats['query_list'][:args.workload_size]
 
     sel_list = [float(card)/table.cardinality for card in tmp_card_list]
 
@@ -634,11 +634,11 @@ def TrainTask(seed=0, rng=None):
                                                   epoch_num=epoch,
                                                   log_every=log_every)
 
-        if epoch % log_every == 0:
-            print('epoch {} train loss {:.4f} nats'.format(
-                epoch, mean_epoch_train_loss))
-            since_start = time.time() - train_start
-            print('time since start: {:.1f} secs'.format(since_start))
+        # if epoch % log_every == 0:
+        print('epoch {} train loss {:.4f} nats'.format(
+            epoch, mean_epoch_train_loss))
+        since_start = time.time() - train_start
+        print('time since start: {:.1f} secs'.format(since_start))
 
         if not args.run_uaeq:
             PATH = 'models/uae-{}-bs-{}-{}epochs-psample-{}-seed-{}-tau-{}-q-weight-{}-layers-{}.pt'.format(
@@ -648,12 +648,12 @@ def TrainTask(seed=0, rng=None):
                 args.dataset, q_bs, epoch, args.psample, seed, tau,  args.layers)
 
         os.makedirs(os.path.dirname(PATH), exist_ok=True)
+        torch.save(model.state_dict(), PATH)
+        print('Saved to:')
+        print(PATH)
+
         if epoch == args.epochs-1:
             since_start = time.time() - train_start
-            print('time since start: {:.1f} secs'.format(since_start))
-            torch.save(model.state_dict(), PATH)
-            print('Saved to:')
-            print(PATH)
-
+            print('time since start: {:.1f} secs'.format(since_start)) 
 
 TrainTask()
